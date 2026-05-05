@@ -76,4 +76,28 @@ class Trip {
       imagePaths: parsedImages,
     );
   }
+
+  Trip copyWith({
+    int? id,
+    String? destination,
+    String? startDate,
+    String? endDate,
+    String? notes,
+    String? status,
+    List<String>? stops,
+    double? budget,
+    List<String>? imagePaths,
+  }) {
+    return Trip(
+      id: id ?? this.id,
+      destination: destination ?? this.destination,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      notes: notes ?? this.notes,
+      status: status ?? this.status,
+      stops: stops ?? this.stops,
+      budget: budget ?? this.budget,
+      imagePaths: imagePaths ?? this.imagePaths,
+    );
+  }
 }

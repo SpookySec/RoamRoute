@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/trip.dart';
+import '../theme/duo_theme.dart';
+import '../services/sound_service.dart';
+import 'duo_card.dart';
 
 class TripCard extends StatelessWidget {
   final Trip trip;
@@ -17,59 +20,73 @@ class TripCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: GestureDetector(
+        onTap: () {
+          DuoSoundService.playClick();
+          onTap();
+        },
+        child: DuoCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.place, color: Colors.blue),
-                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: DuoColors.duoBlue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.place, color: DuoColors.duoBlue),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      trip.destination,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          trip.destination.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: DuoColors.duoTextMain,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        Text(
+                          '${trip.startDate} — ${trip.endDate}',
+                          style: const TextStyle(
+                            color: DuoColors.duoGray,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.share),
+                    icon: const Icon(Icons.share, color: DuoColors.duoGray),
                     onPressed: onShare,
-                    iconSize: 20,
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
+                    icon: const Icon(Icons.delete_outline, color: DuoColors.duoRed),
                     onPressed: onDelete,
-                    iconSize: 20,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${trip.startDate} - ${trip.endDate}',
-                    style: const TextStyle(color: Colors.grey),
                   ),
                 ],
               ),
               if (trip.notes.isNotEmpty) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Text(
                   trip.notes,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.grey),
+                  style: const TextStyle(
+                    color: DuoColors.duoGray,
+                    fontWeight: FontWeight.w500,
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
               ],
             ],

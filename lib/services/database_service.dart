@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/trip.dart';
 import '../models/expense.dart';
+import '../models/moment.dart';
 
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._init();
@@ -21,7 +22,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -52,6 +53,16 @@ class DatabaseService {
         FOREIGN KEY (tripId) REFERENCES trips (id) ON DELETE CASCADE
       )
     ''');
+    await db.execute('''
+      CREATE TABLE moments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tripId INTEGER NOT NULL,
+        filePath TEXT,
+        note TEXT,
+        timestamp TEXT NOT NULL,
+        FOREIGN KEY (tripId) REFERENCES trips (id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -76,6 +87,18 @@ class DatabaseService {
           title TEXT NOT NULL,
           amount REAL NOT NULL,
           date TEXT NOT NULL,
+          FOREIGN KEY (tripId) REFERENCES trips (id) ON DELETE CASCADE
+        )
+      ''');
+    }
+    if (oldVersion < 5) {
+      await db.execute('''
+        CREATE TABLE moments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          tripId INTEGER NOT NULL,
+          filePath TEXT,
+          note TEXT,
+          timestamp TEXT NOT NULL,
           FOREIGN KEY (tripId) REFERENCES trips (id) ON DELETE CASCADE
         )
       ''');
@@ -149,6 +172,28 @@ class DatabaseService {
   Future<int> deleteExpense(int id) async {
     final db = await instance.database;
     return await db.delete('expenses', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // Moment Methods
+  Future<int> createMoment(Moment moment) async {
+    final db = await instance.database;
+    return await db.insert('moments', moment.toMap());
+  }
+
+  Future<List<Moment>> getMomentsByTrip(int tripId) async {
+    final db = await instance.database;
+    final result = await db.query(
+      'moments',
+      where: 'tripId = ?',
+      whereArgs: [tripId],
+      orderBy: 'timestamp DESC',
+    );
+    return result.map((json) => Moment.fromMap(json)).toList();
+  }
+
+  Future<int> deleteMoment(int id) async {
+    final db = await instance.database;
+    return await db.delete('moments', where: 'id = ?', whereArgs: [id]);
   }
 
   Future close() async {

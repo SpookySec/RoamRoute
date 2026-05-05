@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/trip.dart';
 import '../services/database_service.dart';
+import '../theme/duo_theme.dart';
 import '../widgets/trip_card.dart';
+import '../widgets/squishy_button.dart';
 import 'add_trip_screen.dart';
 import 'trip_detail_screen.dart';
 
@@ -20,8 +22,7 @@ class TripsListScreen extends StatefulWidget {
   State<TripsListScreen> createState() => _TripsListScreenState();
 }
 
-class _TripsListScreenState extends State<TripsListScreen>
-    with SingleTickerProviderStateMixin {
+class _TripsListScreenState extends State<TripsListScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<Trip> _upcomingTrips = [];
   List<Trip> _pastTrips = [];
@@ -31,7 +32,6 @@ class _TripsListScreenState extends State<TripsListScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(_handleTabChange);
     _loadTrips();
   }
 
@@ -39,12 +39,6 @@ class _TripsListScreenState extends State<TripsListScreen>
   void dispose() {
     _tabController.dispose();
     super.dispose();
-  }
-
-  void _handleTabChange() {
-    if (_tabController.indexIsChanging) {
-      _loadTrips();
-    }
   }
 
   Future<void> _openAddTrip() async {
@@ -57,13 +51,10 @@ class _TripsListScreenState extends State<TripsListScreen>
 
   Future<void> _loadTrips() async {
     setState(() => _isLoading = true);
-    final upcomingTrips = await DatabaseService.instance.getTripsByStatus(
-      'upcoming',
-    );
+    final upcomingTrips = await DatabaseService.instance.getTripsByStatus('upcoming');
     final pastTrips = await DatabaseService.instance.getTripsByStatus('past');
 
     if (!mounted) return;
-
     setState(() {
       _upcomingTrips = upcomingTrips;
       _pastTrips = pastTrips;
@@ -71,20 +62,116 @@ class _TripsListScreenState extends State<TripsListScreen>
     });
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('ROAM ROUTE'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: DuoColors.duoCardBorder.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              dividerColor: Colors.transparent,
+              indicator: BoxDecoration(
+                color: DuoColors.duoGreen,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: const [BoxShadow(color: DuoColors.duoGreenDark, offset: Offset(0, 4))],
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelColor: Colors.white,
+              unselectedLabelColor: DuoColors.duoGray,
+              labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
+              tabs: const [
+                Tab(text: 'UPCOMING'),
+                Tab(text: 'PAST'),
+              ],
+            ),
+          ),
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildTripsList(_upcomingTrips, 'upcoming'),
+          _buildTripsList(_pastTrips, 'past'),
+        ],
+      ),
+      floatingActionButton: SquishyButton(
+        icon: Icons.add,
+        color: DuoColors.duoGreen,
+        onTap: _openAddTrip,
+      ),
+    );
+  }
+
+  Widget _buildTripsList(List<Trip> trips, String status) {
+    if (_isLoading) return const Center(child: CircularProgressIndicator(color: DuoColors.duoGreen));
+
+    if (trips.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.map, size: 80, color: DuoColors.duoCardBorder),
+              const SizedBox(height: 24),
+              Text(
+                'NO ${status.toUpperCase()} TRIPS',
+                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: DuoColors.duoGray),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Start your next adventure by tapping the button below!',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: DuoColors.duoGray, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(24),
+      itemCount: trips.length,
+      itemBuilder: (context, index) {
+        final trip = trips[index];
+        return TripCard(
+          trip: trip,
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => TripDetailScreen(tripId: trip.id!)),
+            );
+            _loadTrips();
+          },
+          onDelete: () => _deleteTrip(trip),
+          onShare: () => _shareTrip(trip),
+        );
+      },
+    );
+  }
+
   Future<void> _deleteTrip(Trip trip) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Trip'),
-        content: Text('Delete trip to ${trip.destination}?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('DELETE TRIP?'),
+        content: Text('Are you sure you want to delete your trip to ${trip.destination}?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('CANCEL')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: DuoColors.duoRed, foregroundColor: Colors.white),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            child: const Text('DELETE'),
           ),
         ],
       ),
@@ -93,156 +180,10 @@ class _TripsListScreenState extends State<TripsListScreen>
     if (confirm == true) {
       await DatabaseService.instance.deleteTrip(trip.id!);
       _loadTrips();
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Trip deleted'),
-          action: SnackBarAction(
-            label: 'Undo',
-            onPressed: () async {
-              await DatabaseService.instance.createTrip(
-                Trip(
-                  destination: trip.destination,
-                  startDate: trip.startDate,
-                  endDate: trip.endDate,
-                  notes: trip.notes,
-                  status: trip.status,
-                  stops: trip.stops,
-                ),
-              );
-              _loadTrips();
-            },
-          ),
-        ),
-      );
     }
   }
 
   void _shareTrip(Trip trip) {
-    final text =
-        'Trip to ${trip.destination}\n'
-        '${trip.startDate} - ${trip.endDate}\n'
-        '${trip.notes}';
-    Share.share(text);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Travel Planner'),
-        actions: [
-          IconButton(icon: const Icon(Icons.add), onPressed: _openAddTrip),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.map), text: 'Upcoming'),
-            Tab(icon: Icon(Icons.schedule), text: 'Past'),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
-          if (widget.showOnboardingTip)
-            MaterialBanner(
-              content: const Text(
-                'Welcome! Add your first trip and start building a route with real places.',
-              ),
-              leading: const Icon(Icons.tips_and_updates_outlined),
-              actions: [
-                TextButton(
-                  onPressed: widget.onOnboardingDismissed,
-                  child: const Text('Dismiss'),
-                ),
-              ],
-            ),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildTripsList(_upcomingTrips, 'upcoming'),
-                      _buildTripsList(_pastTrips, 'past'),
-                    ],
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTripsList(List<Trip> trips, String status) {
-    if (trips.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: _loadTrips,
-        child: ListView(
-          children: [
-            SizedBox(
-              height: 380,
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.map, size: 64, color: Colors.grey[400]),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No $status trips yet',
-                        style: TextStyle(
-                          color: Colors.grey[700],
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Create your first itinerary in a few taps.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                      ),
-                      const SizedBox(height: 16),
-                      FilledButton.icon(
-                        onPressed: _openAddTrip,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add Trip'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: _loadTrips,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: trips.length,
-        itemBuilder: (context, index) {
-          final trip = trips[index];
-          return TripCard(
-            trip: trip,
-            onTap: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => TripDetailScreen(tripId: trip.id!),
-                ),
-              );
-              _loadTrips();
-            },
-            onDelete: () => _deleteTrip(trip),
-            onShare: () => _shareTrip(trip),
-          );
-        },
-      ),
-    );
+    Share.share('Check out my trip to ${trip.destination}!');
   }
 }
