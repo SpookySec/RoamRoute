@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/trip.dart';
 import '../services/database_service.dart';
 
@@ -23,6 +25,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
   final _destinationController = TextEditingController();
   final _notesController = TextEditingController();
   final _stopController = TextEditingController();
+  final _budgetController = TextEditingController();
   final _destinationFocusNode = FocusNode();
   final _stopFocusNode = FocusNode();
 
@@ -30,6 +33,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
   DateTime? _endDate;
   String _status = 'upcoming';
   final List<String> _stops = [];
+  final List<String> _imagePaths = [];
   final List<String> _destinationSuggestions = [];
   final List<String> _stopSuggestions = [];
   Timer? _destinationDebounce;
@@ -44,10 +48,12 @@ class _AddTripScreenState extends State<AddTripScreen> {
     if (trip != null) {
       _destinationController.text = trip.destination;
       _notesController.text = trip.notes;
+      _budgetController.text = trip.budget.toString();
       _status = trip.status;
       _startDate = _parseDate(trip.startDate);
       _endDate = _parseDate(trip.endDate);
       _stops.addAll(trip.stops);
+      _imagePaths.addAll(trip.imagePaths);
     }
   }
 
@@ -58,6 +64,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
     _destinationController.dispose();
     _notesController.dispose();
     _stopController.dispose();
+    _budgetController.dispose();
     _destinationFocusNode.dispose();
     _stopFocusNode.dispose();
     super.dispose();
@@ -202,6 +209,8 @@ class _AddTripScreenState extends State<AddTripScreen> {
         notes: _notesController.text,
         status: _status,
         stops: _stops,
+        budget: double.tryParse(_budgetController.text) ?? 0.0,
+        imagePaths: _imagePaths,
       );
 
       if (_isEditMode) {
@@ -243,6 +252,23 @@ class _AddTripScreenState extends State<AddTripScreen> {
   void _removeStop(int index) {
     setState(() {
       _stops.removeAt(index);
+    });
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      setState(() {
+        _imagePaths.add(image.path);
+      });
+    }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      _imagePaths.removeAt(index);
     });
   }
 
@@ -402,6 +428,76 @@ class _AddTripScreenState extends State<AddTripScreen> {
                 ),
                 maxLines: 4,
                 maxLength: 280,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _budgetController,
+                decoration: const InputDecoration(
+                  labelText: 'Budget (Total)',
+                  hintText: 'e.g., 1500.00',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.attach_money),
+                ),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Photos',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              if (_imagePaths.isNotEmpty)
+                SizedBox(
+                  height: 100,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _imagePaths.length,
+                    itemBuilder: (context, index) {
+                      return Stack(
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              image: DecorationImage(
+                                image: FileImage(File(_imagePaths[index])),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 0,
+                            right: 8,
+                            child: GestureDetector(
+                              onTap: () => _removeImage(index),
+                              child: Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.close,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _pickImage,
+                icon: const Icon(Icons.add_a_photo),
+                label: const Text('Add Photo'),
               ),
               const SizedBox(height: 24),
               ElevatedButton(

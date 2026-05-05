@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/trip.dart';
+import '../models/expense.dart';
 
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._init();
@@ -20,7 +21,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -35,7 +36,20 @@ class DatabaseService {
         endDate TEXT NOT NULL,
         notes TEXT,
         status TEXT NOT NULL,
-        stops TEXT NOT NULL DEFAULT '[]'
+        stops TEXT NOT NULL DEFAULT '[]',
+        budget REAL NOT NULL DEFAULT 0.0,
+        imagePaths TEXT NOT NULL DEFAULT '[]'
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE expenses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tripId INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        amount REAL NOT NULL,
+        date TEXT NOT NULL,
+        FOREIGN KEY (tripId) REFERENCES trips (id) ON DELETE CASCADE
       )
     ''');
   }
@@ -45,6 +59,26 @@ class DatabaseService {
       await db.execute(
         "ALTER TABLE trips ADD COLUMN stops TEXT NOT NULL DEFAULT '[]'",
       );
+    }
+    if (oldVersion < 3) {
+      await db.execute(
+        "ALTER TABLE trips ADD COLUMN budget REAL NOT NULL DEFAULT 0.0",
+      );
+      await db.execute(
+        "ALTER TABLE trips ADD COLUMN imagePaths TEXT NOT NULL DEFAULT '[]'",
+      );
+    }
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE expenses (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          tripId INTEGER NOT NULL,
+          title TEXT NOT NULL,
+          amount REAL NOT NULL,
+          date TEXT NOT NULL,
+          FOREIGN KEY (tripId) REFERENCES trips (id) ON DELETE CASCADE
+        )
+      ''');
     }
   }
 
@@ -93,6 +127,28 @@ class DatabaseService {
   Future<int> deleteTrip(int id) async {
     final db = await instance.database;
     return await db.delete('trips', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // Expense Methods
+  Future<int> createExpense(Expense expense) async {
+    final db = await instance.database;
+    return await db.insert('expenses', expense.toMap());
+  }
+
+  Future<List<Expense>> getExpensesByTrip(int tripId) async {
+    final db = await instance.database;
+    final result = await db.query(
+      'expenses',
+      where: 'tripId = ?',
+      whereArgs: [tripId],
+      orderBy: 'date DESC',
+    );
+    return result.map((json) => Expense.fromMap(json)).toList();
+  }
+
+  Future<int> deleteExpense(int id) async {
+    final db = await instance.database;
+    return await db.delete('expenses', where: 'id = ?', whereArgs: [id]);
   }
 
   Future close() async {

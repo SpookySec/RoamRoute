@@ -8,6 +8,8 @@ class Trip {
   final String notes;
   final String status; // 'upcoming' or 'past'
   final List<String> stops;
+  final double budget;
+  final List<String> imagePaths;
 
   Trip({
     this.id,
@@ -17,6 +19,8 @@ class Trip {
     required this.notes,
     required this.status,
     this.stops = const [],
+    this.budget = 0.0,
+    this.imagePaths = const [],
   });
 
   Map<String, dynamic> toMap() {
@@ -28,6 +32,8 @@ class Trip {
       'notes': notes,
       'status': status,
       'stops': jsonEncode(stops),
+      'budget': budget,
+      'imagePaths': jsonEncode(imagePaths),
     };
   }
 
@@ -45,6 +51,19 @@ class Trip {
       }
     }
 
+    final imagesValue = map['imagePaths'];
+    List<String> parsedImages = [];
+    if (imagesValue is String && imagesValue.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(imagesValue);
+        if (decoded is List) {
+          parsedImages = decoded.map((e) => e.toString()).toList();
+        }
+      } catch (_) {
+        parsedImages = [];
+      }
+    }
+
     return Trip(
       id: map['id'],
       destination: map['destination'],
@@ -53,6 +72,8 @@ class Trip {
       notes: map['notes'],
       status: map['status'],
       stops: parsedStops,
+      budget: (map['budget'] ?? 0.0).toDouble(),
+      imagePaths: parsedImages,
     );
   }
 }

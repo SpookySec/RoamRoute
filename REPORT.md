@@ -1,77 +1,75 @@
 # Project Report: Roam Route Travel Planner
 
-**Date:** May 5th  
-**Project Name:** Roam Route  
-**Developer:** [Your Name]  
-**Platform:** Flutter (Android & Linux support)
+**Date:** 4/5/2026
+**Project Name:** Roam Route
+**Team:** Abdulrahman Abu Hurirah, Bilal Al Tabbaa, Yazeed Ashour
+**Platform:** Flutter
 
 ---
 
 ## 1. Project Overview & Functionalities
-Roam Route is a travel itinerary management application designed to help users organize their trips by bridging the gap between simple text notes and geographic visualization.
+Roam Route is a travel itinerary app built to make trip planning feel more intuitive. It sits somewhere between basic note-taking and full-on map navigation, helping users organize their journeys while actually seeing them laid out geographically.
 
-### Key Functionalities Implemented:
-*   **Trip Management:** Users can create, view, edit, and delete trip itineraries.
-*   **Categorization:** Automated sorting of trips into "Upcoming" and "Past" categories based on travel dates.
-*   **Multi-Stop Itineraries:** Support for adding multiple "Stops" to a single destination.
-*   **Map Visualization:** Integration of Google Maps to display markers for every stop and draw the travel path (Polylines).
-*   **Location Intelligence:** Real-time location autocomplete using the Google Places SDK.
-*   **Itinerary Sharing:** Ability to export trip details to other apps (Email, WhatsApp, etc.).
-
----
-
-## 2. Backend & Data Source Integration
-The application follows a local-first architecture to ensure reliability during travel with intermittent internet access.
-
-*   **Primary Data Source:** **SQLite** (via `sqflite`). A relational database is used to store `trips` with a schema supporting destinations, dates, notes, and a JSON-encoded list of stops.
-*   **Persistent Settings:** **Shared Preferences** is used for light-weight data such as user preferences and onboarding states.
-*   **External APIs:** 
-    *   **Google Places SDK:** Integrated at the native Android level for location suggestions.
-    *   **Geocoding API:** Used to translate string-based destinations into geographic coordinates (`LatLng`) for map rendering.
+### What it can do so far:
+- **Trip Management:** Create, view, edit, and delete trips with ease.
+- **Smart Categorization:** Trips are automatically sorted into “Upcoming” or “Past” based on their dates.
+- **Multi-Stop Planning:** Add multiple stops within a single destination to map out more detailed itineraries.
+- **Map Visualization:** Google Maps integration lets users see every stop as a marker, with routes connected using polylines.
+- **Location Intelligence:** Real-time autocomplete makes searching for places fast and accurate.
+- **Easy Sharing:** Trips can be exported and shared through apps like Email or WhatsApp.
 
 ---
 
-## 3. CRUD Operations
-The project demonstrates full CRUD (Create, Read, Update, Delete) capabilities through the `DatabaseService` class:
+## 2. Backend & Data Integration
+The app uses a **local-first approach**, which makes it reliable even when internet access is spotty—something that’s pretty common while traveling.
 
-*   **Create:** The `AddTripScreen` captures user input and invokes `createTrip(Trip trip)`, inserting a new row into the SQLite database.
-*   **Read:** The `TripsListScreen` uses reactive queries (`getTripsByStatus`) to populate the UI. The `TripDetailScreen` fetches specific trip data by ID.
-*   **Update:** Users can modify any existing trip. The `updateTrip` method ensures that changes to notes or stops are persisted.
-*   **Delete:** Includes a "Delete with Undo" pattern. When a trip is removed via `deleteTrip(id)`, a SnackBar allows the user to restore the data immediately, enhancing user experience.
-
----
-
-## 4. Key Flutter Components & Packages
-The following libraries were essential in achieving the app's functionality:
-
-| Package | Purpose |
-| :--- | :--- |
-| `google_maps_flutter` | Interactive map rendering and marker management. |
-| `sqflite` | Local relational database persistence. |
-| `geocoding` | Address-to-Coordinate translation. |
-| `share_plus` | Native sharing capabilities for itineraries. |
-| `shared_preferences` | User setting persistence. |
-| `cupertino_icons` | iOS-style iconography for a polished cross-platform look. |
+- **Main Data Storage:** SQLite (via `sqflite`) stores all trip data, including destinations, dates, notes, and stops (saved as JSON).
+- **Lightweight Storage:** Shared Preferences handles smaller bits like user settings and onboarding progress.
+- **External APIs:**
+    - Google Places SDK for location suggestions
+    - Geocoding API to turn place names into coordinates for map display
 
 ---
 
-## 5. Significant Technical Challenge
-**Challenge: Integrating Google Places Autocomplete via Platform Channels.**
+## 3. CRUD Functionality
+All core database operations are handled through the `DatabaseService` class:
 
-While Flutter provides many plugins, direct integration with the Google Places SDK for real-time suggestions required a **Platform Channel** implementation. 
-
-**Solution:**
-I implemented a `MethodChannel` named `roam_route/places`. 
-1.  **Dart Side:** Created a debounced search bar that sends text queries to the host platform.
-2.  **Android Side (Java):** Modified `MainActivity.java` to initialize the `PlacesClient` and handle the `findAutocompletePredictions` request.
-3.  **Data Parsing:** Resulting predictions are passed back to Dart as a `List<Map<String, String>>`, allowing for a seamless "type-to-suggest" experience that feels native.
+- **Create:** Users add trips through `AddTripScreen`, which saves them using `createTrip`.
+- **Read:** Trip lists are dynamically loaded based on their status, and individual trips can be viewed in detail.
+- **Update:** Any part of a trip—notes, stops, dates—can be edited and saved.
+- **Delete:** There’s a “Delete with Undo” feature, so if something gets removed by accident, it can be quickly restored via a SnackBar.
 
 ---
 
-## 6. Remaining Features & Roadmap
-While the core functionality is stable, the following features are planned for the next phase:
+## 4. Core Flutter Packages
 
-*   **Route Optimization:** An algorithm to reorder stops automatically based on the shortest geographic distance.
-*   **Budget Tracker:** Adding a financial layer to each trip to track expenses per stop.
-*   **Offline Map Caching:** Allowing users to download map tiles for areas with no data coverage.
-*   **Photo Gallery:** Integration with the device camera to attach "Memories" (photos) to past trips.
+| Package | Role |
+|--------|------|
+| `google_maps_flutter` | Displays maps and manages markers |
+| `sqflite` | Handles local database storage |
+| `geocoding` | Converts addresses into coordinates |
+| `share_plus` | Enables sharing across apps |
+| `shared_preferences` | Stores user settings |
+| `cupertino_icons` | Adds iOS-style visuals |
+
+---
+
+## 5. Biggest Technical Challenge
+One of the trickiest parts was integrating **Google Places Autocomplete** using platform channels.
+
+Flutter has plenty of plugins, but getting real-time suggestions from the native Google Places SDK required a custom setup.
+
+### How it was handled:
+- On the **Dart side**, a debounced search bar sends user input through a `MethodChannel` (`roam_route/places`).
+- On the **Android side**, `MainActivity.java` was updated to initialize `PlacesClient` and process autocomplete requests.
+- The results are sent back as structured data, making the suggestions feel smooth and native within the app.
+
+---
+
+## 6. What’s Next
+The foundation is solid, but there’s still a lot planned:
+
+- **Route Optimization:** Automatically reorder stops for the most efficient path
+- **Budget Tracking:** Add expense tracking for each trip
+- **Offline Maps:** Download map data for use without internet
+- **Photo Memories:** Attach photos to trips for a more personal touch  
